@@ -49,6 +49,7 @@ import org.apache.activemq.artemis.cli.commands.tools.CompactJournal;
 import org.apache.activemq.artemis.cli.commands.tools.DecodeJournal;
 import org.apache.activemq.artemis.cli.commands.tools.EncodeJournal;
 import org.apache.activemq.artemis.cli.commands.tools.HelpData;
+import org.apache.activemq.artemis.cli.commands.tools.HousekeepData;
 import org.apache.activemq.artemis.cli.commands.tools.PrintData;
 import org.apache.activemq.artemis.cli.commands.tools.PerfJournal;
 import org.apache.activemq.artemis.cli.commands.tools.XmlDataExporter;
@@ -159,14 +160,14 @@ public class Artemis {
          withDefaultCommand(HelpAddress.class).withCommands(CreateAddress.class, DeleteAddress.class, UpdateAddress.class, ShowAddress.class);
 
       if (instance != null) {
-         builder.withGroup("data").withDescription("data tools group (print|imp|exp|encode|decode|compact) (example ./artemis data print)").
-            withDefaultCommand(HelpData.class).withCommands(PrintData.class, XmlDataExporter.class, XmlDataImporter.class, DecodeJournal.class, EncodeJournal.class, CompactJournal.class);
+         builder.withGroup("data").withDescription("data tools group (print|imp|exp|encode|decode|compact|housekeep) (example ./artemis data print)").
+            withDefaultCommand(HelpData.class).withCommands(PrintData.class, XmlDataExporter.class, XmlDataImporter.class, DecodeJournal.class, EncodeJournal.class, CompactJournal.class, HousekeepData.class);
          builder.withGroup("user").withDescription("default file-based user management (add|rm|list|reset) (example ./artemis user list)").
                  withDefaultCommand(HelpUser.class).withCommands(ListUser.class, AddUser.class, RemoveUser.class, ResetUser.class);
          builder = builder.withCommands(Run.class, Stop.class, Kill.class, PerfJournal.class);
       } else {
-         builder.withGroup("data").withDescription("data tools group (print) (example ./artemis data print)").
-            withDefaultCommand(HelpData.class).withCommands(PrintData.class);
+         builder.withGroup("data").withDescription("data tools group (print|housekeep) (example ./artemis data print)").
+            withDefaultCommand(HelpData.class).withCommands(PrintData.class, HousekeepData.class);
          builder = builder.withCommand(Create.class);
          builder = builder.withCommand(Migrate1X.class);
       }
