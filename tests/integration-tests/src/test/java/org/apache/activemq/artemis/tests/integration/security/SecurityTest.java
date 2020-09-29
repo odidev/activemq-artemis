@@ -16,19 +16,22 @@
  */
 package org.apache.activemq.artemis.tests.integration.security;
 
-import java.lang.management.ManagementFactory;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.JMSException;
+import javax.jms.JMSSecurityException;
 import javax.jms.MessageProducer;
 import javax.jms.QueueBrowser;
 import javax.jms.Session;
 import javax.security.cert.X509Certificate;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
+import java.lang.management.ManagementFactory;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQSslConnectionFactory;
@@ -51,12 +54,14 @@ import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnection;
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants;
 import org.apache.activemq.artemis.core.security.CheckType;
 import org.apache.activemq.artemis.core.security.Role;
+import org.apache.activemq.artemis.core.security.impl.SecurityStoreImpl;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.ActiveMQServers;
 import org.apache.activemq.artemis.core.server.Queue;
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl;
 import org.apache.activemq.artemis.core.server.impl.AddressInfo;
 import org.apache.activemq.artemis.core.settings.HierarchicalRepository;
+import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager;
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager;
@@ -65,6 +70,8 @@ import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3;
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager4;
 import org.apache.activemq.artemis.tests.util.ActiveMQTestBase;
 import org.apache.activemq.artemis.tests.util.CreateMessage;
+import org.apache.activemq.artemis.utils.CompositeAddress;
+import org.apache.activemq.artemis.utils.Wait;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.Assert;
 import org.junit.Before;
@@ -509,7 +516,17 @@ public class SecurityTest extends ActiveMQTestBase {
    }
 
    @Test
-   public void testJAASSecurityManagerAuthorizationSameAddressDifferentQueues() throws Exception {
+   // this is for backwards compatibility with the pre-FQQN syntax from ARTEMIS-592
+   public void testJAASSecurityManagerAuthorizationSameAddressDifferentQueuesDotSyntax() throws Exception {
+      internalJAASSecurityManagerAuthorizationSameAddressDifferentQueues(false);
+   }
+
+   @Test
+   public void testJAASSecurityManagerAuthorizationSameAddressDifferentQueuesFqqnSyntax() throws Exception {
+      internalJAASSecurityManagerAuthorizationSameAddressDifferentQueues(true);
+   }
+
+   private void internalJAASSecurityManagerAuthorizationSameAddressDifferentQueues(boolean fqqnSyntax) throws Exception {
       final SimpleString ADDRESS = new SimpleString("address");
       final SimpleString QUEUE_A = new SimpleString("a");
       final SimpleString QUEUE_B = new SimpleString("b");
@@ -518,10 +535,18 @@ public class SecurityTest extends ActiveMQTestBase {
       ActiveMQServer server = addServer(ActiveMQServers.newActiveMQServer(createDefaultInVMConfig().setSecurityEnabled(true), ManagementFactory.getPlatformMBeanServer(), securityManager, false));
       Set<Role> aRoles = new HashSet<>();
       aRoles.add(new Role(QUEUE_A.toString(), false, true, false, false, false, false, false, false, false, false));
-      server.getConfiguration().putSecurityRoles(ADDRESS.concat(".").concat(QUEUE_A).toString(), aRoles);
+      if (fqqnSyntax) {
+         server.getConfiguration().putSecurityRoles(CompositeAddress.toFullyQualified(ADDRESS, QUEUE_A).toString(), aRoles);
+      } else {
+         server.getConfiguration().putSecurityRoles(ADDRESS.concat(".").concat(QUEUE_A).toString(), aRoles);
+      }
       Set<Role> bRoles = new HashSet<>();
       bRoles.add(new Role(QUEUE_B.toString(), false, true, false, false, false, false, false, false, false, false));
-      server.getConfiguration().putSecurityRoles(ADDRESS.concat(".").concat(QUEUE_B).toString(), bRoles);
+      if (fqqnSyntax) {
+         server.getConfiguration().putSecurityRoles(CompositeAddress.toFullyQualified(ADDRESS, QUEUE_B).toString(), bRoles);
+      } else {
+         server.getConfiguration().putSecurityRoles(ADDRESS.concat(".").concat(QUEUE_B).toString(), bRoles);
+      }
       server.start();
       server.addAddressInfo(new AddressInfo(ADDRESS, RoutingType.ANYCAST));
       server.createQueue(new QueueConfiguration(QUEUE_A).setAddress(ADDRESS).setRoutingType(RoutingType.ANYCAST));
@@ -562,6 +587,70 @@ public class SecurityTest extends ActiveMQTestBase {
       } catch (ActiveMQException e) {
          assertTrue(e instanceof ActiveMQSecurityException);
       }
+   }
+
+   @Test
+   public void testJAASSecurityManagerFQQNAuthorizationWithJMS() throws Exception {
+      final SimpleString ADDRESS = new SimpleString("address");
+      final SimpleString QUEUE_A = new SimpleString("a");
+      final SimpleString QUEUE_B = new SimpleString("b");
+
+      ActiveMQJAASSecurityManager securityManager = new ActiveMQJAASSecurityManager("PropertiesLogin");
+      ActiveMQServer server = addServer(ActiveMQServers.newActiveMQServer(createDefaultInVMConfig().setSecurityEnabled(true), ManagementFactory.getPlatformMBeanServer(), securityManager, false));
+
+      Set<Role> aRoles = new HashSet<>();
+      aRoles.add(new Role(QUEUE_A.toString(), false, true, true, false, false, false, false, false, true, false));
+      server.getConfiguration().putSecurityRoles(CompositeAddress.toFullyQualified(ADDRESS, QUEUE_A).toString(), aRoles);
+
+      Set<Role> bRoles = new HashSet<>();
+      bRoles.add(new Role(QUEUE_B.toString(), false, true, true, false, false, false, false, false, true, false));
+      server.getConfiguration().putSecurityRoles(CompositeAddress.toFullyQualified(ADDRESS, QUEUE_B).toString(), bRoles);
+
+      server.start();
+
+      ConnectionFactory cf = new ActiveMQConnectionFactory("vm://0");
+      Connection aConnection = cf.createConnection("a", "a");
+      Session aSession = aConnection.createSession();
+      Connection bConnection = cf.createConnection("b", "b");
+      Session bSession = bConnection.createSession();
+
+      javax.jms.Queue queueA = aSession.createQueue(CompositeAddress.toFullyQualified(ADDRESS, QUEUE_A).toString());
+      javax.jms.Queue queueB = bSession.createQueue(CompositeAddress.toFullyQualified(ADDRESS, QUEUE_B).toString());
+
+      // client A CONSUME from queue A
+      try {
+         aSession.createConsumer(queueA);
+      } catch (JMSException e) {
+         e.printStackTrace();
+         Assert.fail("should not throw exception here");
+      }
+
+      // client B CONSUME from queue A
+      try {
+         bSession.createConsumer(queueA);
+         Assert.fail("should throw exception here");
+      } catch (JMSException e) {
+         assertTrue(e instanceof JMSSecurityException);
+      }
+
+      // client B CONSUME from queue B
+      try {
+         bSession.createConsumer(queueB);
+      } catch (JMSException e) {
+         e.printStackTrace();
+         Assert.fail("should not throw exception here");
+      }
+
+      // client A CONSUME from queue B
+      try {
+         aSession.createConsumer(queueB);
+         Assert.fail("should throw exception here");
+      } catch (JMSException e) {
+         assertTrue(e instanceof JMSSecurityException);
+      }
+
+      aConnection.close();
+      bConnection.close();
    }
 
    @Test
@@ -1393,6 +1482,9 @@ public class SecurityTest extends ActiveMQTestBase {
 
       securityManager.getConfiguration().addRole("auser", "receiver");
 
+      // invalidate the authentication cache so the new role will be picked up
+      ((SecurityStoreImpl)server.getSecurityStore()).invalidateAuthenticationCache();
+
       session.createConsumer(SecurityTest.queueA);
 
       // Removing the Role... the check should be cached, so the next createConsumer shouldn't fail
@@ -1464,7 +1556,7 @@ public class SecurityTest extends ActiveMQTestBase {
 
    @Test
    public void testSendMessageUpdateSender() throws Exception {
-      Configuration configuration = createDefaultInVMConfig().setSecurityEnabled(true).setSecurityInvalidationInterval(-1);
+      Configuration configuration = createDefaultInVMConfig().setSecurityEnabled(true).setSecurityInvalidationInterval(1000);
       ActiveMQServer server = createServer(false, configuration);
       server.start();
       HierarchicalRepository<Set<Role>> securityRepository = server.getSecurityRepository();
@@ -1499,7 +1591,14 @@ public class SecurityTest extends ActiveMQTestBase {
 
       securityManager.getConfiguration().addRole("auser", "receiver");
 
-      session.createConsumer(SecurityTest.queueA);
+      Wait.assertTrue(() -> {
+         try {
+            session.createConsumer(SecurityTest.queueA);
+            return true;
+         } catch (Exception e) {
+            return false;
+         }
+      }, 2000, 100);
 
       // Removing the Role... the check should be cached... but we used
       // setSecurityInvalidationInterval(0), so the

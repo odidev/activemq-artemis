@@ -102,6 +102,8 @@ public class FileConfigurationTest extends ConfigurationImplTest {
       Assert.assertEquals(54321, conf.getThreadPoolMaxSize());
       Assert.assertEquals(false, conf.isSecurityEnabled());
       Assert.assertEquals(5423, conf.getSecurityInvalidationInterval());
+      Assert.assertEquals(333, conf.getAuthenticationCacheSize());
+      Assert.assertEquals(444, conf.getAuthorizationCacheSize());
       Assert.assertEquals(true, conf.isWildcardRoutingEnabled());
       Assert.assertEquals(new SimpleString("Giraffe"), conf.getManagementAddress());
       Assert.assertEquals(new SimpleString("Whatever"), conf.getManagementNotificationAddress());
@@ -148,6 +150,7 @@ public class FileConfigurationTest extends ConfigurationImplTest {
       Assert.assertEquals(false, conf.isRejectEmptyValidatedUser());
       Assert.assertEquals(98765, conf.getConnectionTtlCheckInterval());
       Assert.assertEquals(1234567, conf.getConfigurationFileRefreshPeriod());
+      Assert.assertEquals("TEMP", conf.getTemporaryQueueNamespace());
 
       Assert.assertEquals("127.0.0.1", conf.getNetworkCheckList());
       Assert.assertEquals("some-nick", conf.getNetworkCheckNIC());
@@ -375,6 +378,8 @@ public class FileConfigurationTest extends ConfigurationImplTest {
       assertEquals(3, conf.getAddressesSettings().get("a1").getDefaultRingSize());
       assertEquals(0, conf.getAddressesSettings().get("a1").getRetroactiveMessageCount());
       assertTrue(conf.getAddressesSettings().get("a1").isEnableMetrics());
+      assertNull("none fonfigured", conf.getAddressesSettings().get("a1").getPageStoreName());
+      assertEquals(new SimpleString("a2.shared"), conf.getAddressesSettings().get("a2").getPageStoreName());
 
       assertEquals("a2.1", conf.getAddressesSettings().get("a2").getDeadLetterAddress().toString());
       assertEquals(true, conf.getAddressesSettings().get("a2").isAutoCreateDeadLetterResources());

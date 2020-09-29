@@ -538,18 +538,11 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
       }
 
       SimpleString address = removePrefix(binding.getAddress());
-      if (browseOnly) {
-         try {
-            securityCheck(address, queueName, CheckType.BROWSE, this);
-         } catch (Exception e) {
-            securityCheck(address.concat(".").concat(unPrefixedQueueName), queueName, CheckType.BROWSE, this);
-         }
-      } else {
-         try {
-            securityCheck(address, queueName, CheckType.CONSUME, this);
-         } catch (Exception e) {
-            securityCheck(address.concat(".").concat(unPrefixedQueueName), queueName, CheckType.CONSUME, this);
-         }
+      try {
+         securityCheck(address, unPrefixedQueueName, browseOnly ? CheckType.BROWSE : CheckType.CONSUME, this);
+      } catch (Exception e) {
+         // this is here for backwards compatibility with the pre-FQQN syntax from ARTEMIS-592
+         securityCheck(address.concat(".").concat(unPrefixedQueueName), queueName, browseOnly ? CheckType.BROWSE : CheckType.CONSUME, this);
       }
 
       Filter filter = FilterImpl.createFilter(filterString);
@@ -723,12 +716,8 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
          .setAddress(removePrefix(queueConfiguration.getAddress()))
          .setName(removePrefix(queueConfiguration.getName()));
 
-      if (queueConfiguration.isDurable()) {
-         // make sure the user has privileges to create this queue
-         securityCheck(queueConfiguration.getAddress(), queueConfiguration.getName(), CheckType.CREATE_DURABLE_QUEUE, this);
-      } else {
-         securityCheck(queueConfiguration.getAddress(), queueConfiguration.getName(), CheckType.CREATE_NON_DURABLE_QUEUE, this);
-      }
+      // make sure the user has privileges to create this queue
+      securityCheck(queueConfiguration.getAddress(), queueConfiguration.getName(), queueConfiguration.isDurable() ? CheckType.CREATE_DURABLE_QUEUE : CheckType.CREATE_NON_DURABLE_QUEUE, this);
 
       AddressSettings as = server.getAddressSettingsRepository().getMatch(queueConfiguration.getAddress().toString());
 
@@ -1043,7 +1032,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
       }
       queueConfiguration.setAddress(removePrefix(queueConfiguration.getAddress()));
 
-      securityCheck(queueConfiguration.getAddress(), queueConfiguration.getName(), queueConfiguration.isDurable() == null || queueConfiguration.isDurable() ? CheckType.CREATE_DURABLE_QUEUE : CheckType.CREATE_NON_DURABLE_QUEUE, this);
+      securityCheck(queueConfiguration.getAddress(), queueConfiguration.getName(), queueConfiguration.isDurable() ? CheckType.CREATE_DURABLE_QUEUE : CheckType.CREATE_NON_DURABLE_QUEUE, this);
 
       server.checkQueueCreationLimit(getUsername());
 
@@ -1202,8 +1191,9 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
    }
 
    @Override
-   public void acknowledge(final long consumerID, final long messageID) throws Exception {
+   public List<Long> acknowledge(final long consumerID, final long messageID) throws Exception {
       ServerConsumer consumer = findConsumer(consumerID);
+      List<Long> ackedRefs = null;
 
       if (tx != null && tx.getState() == State.ROLLEDBACK) {
          // JBPAPP-8845 - if we let stuff to be acked on a rolled back TX, we will just
@@ -1211,7 +1201,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
          // The tx has already timed out, so we need to ack and rollback immediately
          Transaction newTX = newTransaction();
          try {
-            consumer.acknowledge(newTX, messageID);
+            ackedRefs = consumer.acknowledge(newTX, messageID);
          } catch (Exception e) {
             // just ignored
             // will log it just in case
@@ -1220,8 +1210,10 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
          }
          newTX.rollback();
       } else {
-         consumer.acknowledge(autoCommitAcks ? null : tx, messageID);
+         ackedRefs = consumer.acknowledge(autoCommitAcks ? null : tx, messageID);
       }
+
+      return ackedRefs;
    }
 
    @Override
@@ -1755,7 +1747,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
                                           boolean noAutoCreateQueue,
                                           RoutingContext routingContext) throws Exception {
       if (AuditLogger.isMessageEnabled()) {
-         AuditLogger.coreSendMessage(getUsername(), routingContext);
+         AuditLogger.coreSendMessage(getUsername(), messageParameter.toString(), routingContext);
       }
 
       final Message message = LargeServerMessageImpl.checkLargeMessage(messageParameter, storageManager);
@@ -2140,10 +2132,9 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
 
       AddressInfo art = getAddressAndRoutingType(new AddressInfo(msg.getAddressSimpleString(), routingType));
 
-      // Consumer
       // check the user has write access to this address.
       try {
-         securityCheck(art.getName(), CheckType.SEND, this);
+         securityCheck(CompositeAddress.extractAddressName(art.getName()), CompositeAddress.isFullyQualified(art.getName()) ? CompositeAddress.extractQueueName(art.getName()) : null, CheckType.SEND, this);
       } catch (ActiveMQException e) {
          if (!autoCommitSends && tx != null) {
             tx.markAsRollbackOnly(e);

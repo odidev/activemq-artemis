@@ -160,6 +160,12 @@ public final class ActiveMQDefaultConfiguration {
    // how long (in ms) to wait before invalidating the security cache
    private static long DEFAULT_SECURITY_INVALIDATION_INTERVAL = 10000;
 
+   // how large to make the authentication cache
+   private static long DEFAULT_AUTHENTICATION_CACHE_SIZE = 1000;
+
+   // how large to make the authorization cache
+   private static long DEFAULT_AUTHORIZATION_CACHE_SIZE = 1000;
+
    // how long (in ms) to wait to acquire a file lock on the journal
    private static long DEFAULT_JOURNAL_LOCK_ACQUISITION_TIMEOUT = -1;
 
@@ -534,6 +540,8 @@ public final class ActiveMQDefaultConfiguration {
 
    public static final boolean DEFAULT_GROUP_REBALANCE = false;
 
+   public static final boolean DEFAULT_GROUP_REBALANCE_PAUSE_DISPATCH = false;
+
    public static final SimpleString DEFAULT_GROUP_FIRST_KEY = null;
 
    public static final RoutingType DEFAULT_ROUTING_TYPE = RoutingType.MULTICAST;
@@ -611,6 +619,8 @@ public final class ActiveMQDefaultConfiguration {
    // Whether or not to report JVM thread metrics
    private static final boolean DEFAULT_JVM_THREAD_METRICS = false;
 
+   public static final String DEFAULT_TEMPORARY_QUEUE_NAMESPACE = "";
+
    /**
     * If true then the ActiveMQ Artemis Server will make use of any Protocol Managers that are in available on the classpath. If false then only the core protocol will be available, unless in Embedded mode where users can inject their own Protocol Managers.
     */
@@ -676,6 +686,20 @@ public final class ActiveMQDefaultConfiguration {
     */
    public static long getDefaultSecurityInvalidationInterval() {
       return DEFAULT_SECURITY_INVALIDATION_INTERVAL;
+   }
+
+   /**
+    * how large to make the authentication cache
+    */
+   public static long getDefaultAuthenticationCacheSize() {
+      return DEFAULT_AUTHENTICATION_CACHE_SIZE;
+   }
+
+   /**
+    * how large to make the authorization cache
+    */
+   public static long getDefaultAuthorizationCacheSize() {
+      return DEFAULT_AUTHORIZATION_CACHE_SIZE;
    }
 
    /**
@@ -1503,6 +1527,10 @@ public final class ActiveMQDefaultConfiguration {
       return DEFAULT_GROUP_REBALANCE;
    }
 
+   public static boolean getDefaultGroupRebalancePauseDispatch() {
+      return DEFAULT_GROUP_REBALANCE_PAUSE_DISPATCH;
+   }
+
    public static SimpleString getDefaultGroupFirstKey() {
       return DEFAULT_GROUP_FIRST_KEY;
    }
@@ -1666,4 +1694,7 @@ public final class ActiveMQDefaultConfiguration {
       return DEFAULT_JVM_THREAD_METRICS;
    }
 
+   public static String getDefaultTemporaryQueueNamespace() {
+      return DEFAULT_TEMPORARY_QUEUE_NAMESPACE;
+   }
 }

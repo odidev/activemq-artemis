@@ -27,6 +27,7 @@ public class QueueConfigurationUtils {
       config.setMaxConsumers(config.getMaxConsumers() == null ? as.getDefaultMaxConsumers() : config.getMaxConsumers());
       config.setExclusive(config.isExclusive() == null ? as.isDefaultExclusiveQueue() : config.isExclusive());
       config.setGroupRebalance(config.isGroupRebalance() == null ? as.isDefaultGroupRebalance() : config.isGroupRebalance());
+      config.setGroupRebalancePauseDispatch(config.isGroupRebalancePauseDispatch() == null ? as.isDefaultGroupRebalancePauseDispatch() : config.isGroupRebalancePauseDispatch());
       config.setGroupBuckets(config.getGroupBuckets() == null ? as.getDefaultGroupBuckets() : config.getGroupBuckets());
       config.setGroupFirstKey(config.getGroupFirstKey() == null ? as.getDefaultGroupFirstKey() : config.getGroupFirstKey());
       config.setLastValue(config.isLastValue() == null ? as.isDefaultLastValueQueue() : config.isLastValue());
@@ -45,5 +46,6 @@ public class QueueConfigurationUtils {
       config.setAutoDeleteMessageCount(config.getAutoDeleteMessageCount() == null ? as.getAutoDeleteQueuesMessageCount() : config.getAutoDeleteMessageCount());
 
       config.setEnabled(config.isEnabled() == null ? ActiveMQDefaultConfiguration.getDefaultEnabled() : config.isEnabled());
+      config.setPageStoreName(as.getPageStoreName());
    }
 }

@@ -2299,14 +2299,6 @@ public interface AuditLogger extends BasicLogger {
    @Message(id = 601267, value = "User {0} is creating a core session on target resource {1} {2}", format = Message.Format.MESSAGE_FORMAT)
    void createCoreSession(String user, Object source, Object... args);
 
-   static void getProducedRate(Object source) {
-      LOGGER.getProducedRate(getCaller(), source);
-   }
-
-   @LogMessage(level = Logger.Level.INFO)
-   @Message(id = 601268, value = "User {0} is getting produced message rate on target resource: {1} {2}", format = Message.Format.MESSAGE_FORMAT)
-   void getProducedRate(String user, Object source, Object... args);
-
    static void getAcknowledgeAttempts(Object source) {
       LOGGER.getMessagesAcknowledged(getCaller(), source);
    }
@@ -2414,18 +2406,26 @@ public interface AuditLogger extends BasicLogger {
    @Message(id = 601513, value = "User {0} is getting file property on target resource: {1} {2}", format = Message.Format.MESSAGE_FORMAT)
    void getFile(String user, Object source, Object... args);
 
+   static void getPreparedTransactionMessageCount(Object source) {
+      LOGGER.getPreparedTransactionMessageCount(getCaller(), source);
+   }
+
+   @LogMessage(level = Logger.Level.INFO)
+   @Message(id = 601514, value = "User {0} is getting preparedTransactionMessageCount property on target resource: {1} {2}", format = Message.Format.MESSAGE_FORMAT)
+   void getPreparedTransactionMessageCount(String user, Object source, Object... args);
+
    /*
     * This logger is for message production and consumption and is on the hot path so enabled independently
     *
     * */
    //hot path log using a different logger
-   static void coreSendMessage(String user, Object context) {
-      MESSAGE_LOGGER.sendMessage(getCaller(user), context);
+   static void coreSendMessage(String user, String messageToString, Object context) {
+      MESSAGE_LOGGER.logCoreSendMessage(getCaller(user), messageToString, context);
    }
 
    @LogMessage(level = Logger.Level.INFO)
-   @Message(id = 601500, value = "User {0} is sending a core message with Context: {1}", format = Message.Format.MESSAGE_FORMAT)
-   void sendMessage(String user, Object context);
+   @Message(id = 601500, value = "User {0} is sending a message {1}, with Context: {2}", format = Message.Format.MESSAGE_FORMAT)
+   void logCoreSendMessage(String user, String messageToString, Object context);
 
    //hot path log using a different logger
    static void coreConsumeMessage(String queue) {
@@ -2729,4 +2729,28 @@ public interface AuditLogger extends BasicLogger {
    @LogMessage(level = Logger.Level.INFO)
    @Message(id = 601734, value = "User {0} failed to resume address {1}", format = Message.Format.MESSAGE_FORMAT)
    void resumeAddressFailure(String user, String queueName);
+
+   static void isGroupRebalancePauseDispatch(Object source) {
+      LOGGER.isGroupRebalancePauseDispatch(getCaller(), source);
+   }
+
+   @LogMessage(level = Logger.Level.INFO)
+   @Message(id = 601735, value = "User {0} is getting group rebalance pause dispatch property on target resource: {1} {2}", format = Message.Format.MESSAGE_FORMAT)
+   void isGroupRebalancePauseDispatch(String user, Object source, Object... args);
+
+   static void getAuthenticationCacheSize(Object source) {
+      LOGGER.getAuthenticationCacheSize(getCaller(), source);
+   }
+
+   @LogMessage(level = Logger.Level.INFO)
+   @Message(id = 601736, value = "User {0} is getting authentication cache size on target resource: {1} {2}", format = Message.Format.MESSAGE_FORMAT)
+   void getAuthenticationCacheSize(String user, Object source, Object... args);
+
+   static void getAuthorizationCacheSize(Object source) {
+      LOGGER.getAuthorizationCacheSize(getCaller(), source);
+   }
+
+   @LogMessage(level = Logger.Level.INFO)
+   @Message(id = 601737, value = "User {0} is getting authorization cache size on target resource: {1} {2}", format = Message.Format.MESSAGE_FORMAT)
+   void getAuthorizationCacheSize(String user, Object source, Object... args);
 }

@@ -122,6 +122,10 @@ public class ConfigurationImpl implements Configuration, Serializable {
 
    private long securityInvalidationInterval = ActiveMQDefaultConfiguration.getDefaultSecurityInvalidationInterval();
 
+   private long authenticationCacheSize = ActiveMQDefaultConfiguration.getDefaultAuthenticationCacheSize();
+
+   private long authorizationCacheSize = ActiveMQDefaultConfiguration.getDefaultAuthorizationCacheSize();
+
    private boolean securityEnabled = ActiveMQDefaultConfiguration.isDefaultSecurityEnabled();
 
    private boolean gracefulShutdownEnabled = ActiveMQDefaultConfiguration.isDefaultGracefulShutdownEnabled();
@@ -348,6 +352,8 @@ public class ConfigurationImpl implements Configuration, Serializable {
 
    private int pageSyncTimeout = ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutNio();
 
+   private String temporaryQueueNamespace = ActiveMQDefaultConfiguration.getDefaultTemporaryQueueNamespace();
+
    /**
     * Parent folder for all data folders.
     */
@@ -503,6 +509,28 @@ public class ConfigurationImpl implements Configuration, Serializable {
    @Override
    public ConfigurationImpl setSecurityInvalidationInterval(final long interval) {
       securityInvalidationInterval = interval;
+      return this;
+   }
+
+   @Override
+   public long getAuthenticationCacheSize() {
+      return authenticationCacheSize;
+   }
+
+   @Override
+   public ConfigurationImpl setAuthenticationCacheSize(final long size) {
+      authenticationCacheSize = size;
+      return this;
+   }
+
+   @Override
+   public long getAuthorizationCacheSize() {
+      return authorizationCacheSize;
+   }
+
+   @Override
+   public ConfigurationImpl setAuthorizationCacheSize(final long size) {
+      authorizationCacheSize = size;
       return this;
    }
 
@@ -2467,6 +2495,17 @@ public class ConfigurationImpl implements Configuration, Serializable {
       } catch (Exception e) {
          throw new RuntimeException(e);
       }
+   }
+
+   @Override
+   public String getTemporaryQueueNamespace() {
+      return temporaryQueueNamespace;
+   }
+
+   @Override
+   public ConfigurationImpl setTemporaryQueueNamespace(final String temporaryQueueNamespace) {
+      this.temporaryQueueNamespace = temporaryQueueNamespace;
+      return this;
    }
 
 }

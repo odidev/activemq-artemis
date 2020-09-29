@@ -50,6 +50,15 @@ public class QueueControlUsingCoreTest extends QueueControlTest {
          }
 
          @Override
+         public int getPreparedTransactionMessageCount() {
+            try {
+               return (Integer) proxy.invokeOperation(Integer.class, "getPreparedTransactionMessageCount");
+            } catch (Exception e) {
+               throw new RuntimeException(e.getMessage(), e);
+            }
+         }
+
+         @Override
          public void resetAllGroups() {
             try {
                proxy.invokeOperation("resetAllGroups");
@@ -93,6 +102,11 @@ public class QueueControlUsingCoreTest extends QueueControlTest {
          @Override
          public boolean isGroupRebalance() {
             return (Boolean) proxy.retrieveAttributeValue("groupRebalance");
+         }
+
+         @Override
+         public boolean isGroupRebalancePauseDispatch() {
+            return (Boolean) proxy.retrieveAttributeValue("groupRebalancePauseDispatch");
          }
 
          @Override
@@ -243,11 +257,6 @@ public class QueueControlUsingCoreTest extends QueueControlTest {
          @Override
          public long getMessageCount() {
             return (Long) proxy.retrieveAttributeValue("messageCount", Long.class);
-         }
-
-         @Override
-         public float getProducedRate() {
-            return (Long) proxy.retrieveAttributeValue("producedRate", Long.class);
          }
 
          @Override

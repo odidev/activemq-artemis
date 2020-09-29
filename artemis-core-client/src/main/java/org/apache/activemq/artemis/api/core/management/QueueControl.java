@@ -106,12 +106,6 @@ public interface QueueControl {
    long getMessageCount();
 
    /**
-    * Returns the rate of writing messages to the queue.
-    */
-   @Attribute(desc = "rate of writing messages to the queue currently (based on default window function)")
-   float getProducedRate();
-
-   /**
     * Returns the persistent size of all messages currently in this queue. The persistent size of a message
     * is the amount of space the message would take up on disk which is used to track how much data there
     * is to consume on this queue
@@ -702,6 +696,12 @@ public interface QueueControl {
    boolean isGroupRebalance();
 
    /**
+    * Returns whether the dispatch is paused when groups of this queue are automatically rebalanced.
+    */
+   @Attribute(desc = "whether the dispatch is paused when groups of this queue are automatically rebalanced")
+   boolean isGroupRebalancePauseDispatch();
+
+   /**
     * Will return the group buckets.
     */
    @Attribute(desc = "Get the group buckets")
@@ -712,4 +712,10 @@ public interface QueueControl {
     */
    @Attribute(desc = "Get the header key to notify a consumer of a group change")
    String getGroupFirstKey();
+
+   /**
+    * Will return the number of messages stuck in prepared transactions
+    */
+   @Attribute(desc = "return how many messages are stuck in prepared transactions")
+   int getPreparedTransactionMessageCount();
 }

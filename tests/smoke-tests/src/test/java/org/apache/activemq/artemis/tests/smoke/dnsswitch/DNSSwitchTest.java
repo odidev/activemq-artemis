@@ -218,7 +218,17 @@ public class DNSSwitchTest extends SmokeTestBase {
 
       Assert.assertTrue("You must send pairs as overrideParameters", overrideParameters.length % 2 == 0);
 
-      File security = new File(System.getProperty("java.home") + File.separator + "lib" + File.separator + "security" + File.separator + "java.security");
+
+      String javaVersion = System.getProperty("java.version");
+
+      File security;
+
+      if (javaVersion.startsWith("1.8")) {
+         security = new File(System.getProperty("java.home") + File.separator + "lib" + File.separator + "security" + File.separator + "java.security");
+      } else {
+         security = new File(System.getProperty("java.home") + File.separator + "conf" + File.separator + "security" + File.separator + "java.security");
+      }
+
       Properties securityProperties = new Properties();
       securityProperties.load(new FileInputStream(security));
 
@@ -663,13 +673,25 @@ public class DNSSwitchTest extends SmokeTestBase {
 
    }
 
-
    @Test
-   public void testWithoutPing() throws Throwable {
-      spawnRun(serverLocation, "testWithoutPing", getServerLocation(SERVER_LIVE), getServerLocation(SERVER_BACKUP));
+   public void testWithoutPingKill() throws Throwable {
+      spawnRun(serverLocation, "testWithoutPing", getServerLocation(SERVER_LIVE), getServerLocation(SERVER_BACKUP), "1");
    }
 
+   @Test
+   public void testWithoutPingRestart() throws Throwable {
+      spawnRun(serverLocation, "testWithoutPing", getServerLocation(SERVER_LIVE), getServerLocation(SERVER_BACKUP), "0");
+   }
+   /**
+    * arg[0] = constant "testWithoutPing" to be used on reflection through main(String arg[])
+    * arg[1] = serverlive
+    * arg[2] = server backup
+    * arg[3] = 1 | 0 (kill the backup = 1, stop the backup = 0);
+    * @param args
+    * @throws Throwable
+    */
    public static void testWithoutPing(String[] args) throws Throwable {
+      boolean killTheBackup = Integer.parseInt(args[3]) == 1;
       NetUtil.netUp(FIRST_IP, "lo:first");
       NetUtil.netUp(SECOND_IP, "lo:second");
 
@@ -719,7 +741,13 @@ public class DNSSwitchTest extends SmokeTestBase {
          System.out.println("Forcing backup down and restarting it");
          System.out.println("*******************************************************************************************************************************");
 
-         serverBackup.destroyForcibly();
+         if (killTheBackup) {
+            serverBackup.destroyForcibly();
+         } else {
+            String serverLocation = args[2];
+            stopServerWithFile(serverLocation);
+            Assert.assertTrue(serverBackup.waitFor(10, TimeUnit.SECONDS));
+         }
 
          cleanupData(SERVER_BACKUP);
 
@@ -739,6 +767,7 @@ public class DNSSwitchTest extends SmokeTestBase {
       }
 
    }
+
 
    private static void connectAndWaitBackup() throws Exception {
       ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("tcp://FIRST:61616?ha=true");

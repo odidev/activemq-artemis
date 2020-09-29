@@ -554,6 +554,41 @@ Open the file `<broker-instance>/etc/broker.xml` for editing.
 
 Warning: Disabling all the queues on an address means that any message sent to that address will be silently dropped.
 
+### Temporary Queues
+
+For some protocols and APIs which only support monolithic "destinations"
+without the address/queue separation (e.g. AMQP, JMS, etc.) temporary queues
+are created by the broker using a UUID (i.e universally unique identifier) as
+the name for both the address and the queue. Because the name is a UUID it is
+impossible to create an `address-setting` for it whose `match` is anything but
+`#`.
+
+To solve this problem one can specify the `temporary-queue-namespace` in
+`broker.xml` and then create an `address-setting` whose `match` value
+corresponds to the configured `temporary-queue-namespace`. When the
+`temporary-queue-namespace` is set and a temporary queue is created then the
+broker will prepend the `temporary-queue-namespace` value along with the
+`delimiter` value configured in `wildcard-addresses` (defaults to `.`) to the
+address name and use that to lookup the associated `address-setting` values.
+
+Here's a simple example configuration:
+
+```xml
+<temporary-queue-namespace>temp</temporary-queue-namespace>
+
+<address-settings>
+   <address-setting match="temp.#">
+      <enable-metrics>false</enable-metrics>
+   </address-setting>
+</address-settings>
+```
+
+Using this configuration any temporary queue will have metrics disabled.
+
+> **Note:**
+>
+> This setting does *not* change the actual name of the temporary queue. It
+> only changes the name used to *lookup* the address-settings.
 
 ## Protocol Managers
 
@@ -746,6 +781,38 @@ the client-side. If the value is `BLOCK` then client message producers will
 block when they try and send further messages.  See the [Flow
 Control](flow-control.md) and [Paging](paging.md) chapters for more info.
 
+`page-store-name` defines the name of the shared page store for matching addresses.
+It is typically unused because the page store name maps to an address name by default.
+However when addresses are hierarchical and subscriptions use 
+[wildcards](wildcard-routing.md), this setting is **required** to support [paging](paging.md).
+Subscriptions assume a single page store for cursor management and resource usage
+calculations. Using an explicitly configured `page-store-name` that will match the
+root address of the hierarchy, paging can coalesce to a single page store and 
+the required assumptions will hold.
+
+For example, with a MULTICAST address hierarchy of:
+ - ticker.stock.us.apple
+ - ticker.stock.us.orange
+ - ticker.stock.eu.pear
+ 
+ and with wildcard subscriptions on:
+  - ticker.stock.#
+  - ticker.stock.eu.#
+  
+ an address setting of: 
+ 
+ ```xml
+ <address-settings>
+    <address-setting match="ticker.stock.#">
+       <page-store-name>ticker.stock.#</page-store-name>
+       ...
+ ```
+ will ensure that all paged messages coalesce into a single page store named `ticker.stock.#`.
+ The name does not need to be the same as the `match` attribute, it can be any string value.
+ What **is** important is that the `match` attribute captures the root of the hierarchy that will
+ support wildcards subscriptions.
+ 
+ 
 `message-counter-history-day-limit` is the number of days to keep message
 counter history for this address assuming that `message-counter-enabled` is
 `true`. Default is `0`.

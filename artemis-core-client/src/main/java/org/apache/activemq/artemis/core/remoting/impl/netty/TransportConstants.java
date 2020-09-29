@@ -165,9 +165,12 @@ public class TransportConstants {
 
    public static final String CLUSTER_CONNECTION = "clusterConnection";
 
+   @Deprecated
    public static final String STOMP_CONSUMERS_CREDIT = "stompConsumerCredits";
 
-   public static final int STOMP_DEFAULT_CONSUMERS_CREDIT = 10 * 1024; // 10K
+   public static final String STOMP_CONSUMER_WINDOW_SIZE = "stompConsumerWindowSize";
+
+   public static final int STOMP_DEFAULT_CONSUMER_WINDOW_SIZE = 10 * 1024; // 10K
 
    public static final String PROXY_ENABLED_PROP_NAME = "socksEnabled";
 
@@ -182,6 +185,10 @@ public class TransportConstants {
    public static final String PROXY_PASSWORD_PROP_NAME = "socksPassword";
 
    public static final String PROXY_REMOTE_DNS_PROP_NAME = "socksRemoteDNS";
+
+   public static final String AUTO_START = "autoStart";
+
+   public static final boolean DEFAULT_AUTO_START = true;
 
    public static final boolean DEFAULT_SSL_ENABLED = false;
 
@@ -396,6 +403,7 @@ public class TransportConstants {
       allowableAcceptorKeys.add(TransportConstants.DIRECT_DELIVER);
       allowableAcceptorKeys.add(TransportConstants.CLUSTER_CONNECTION);
       allowableAcceptorKeys.add(TransportConstants.STOMP_CONSUMERS_CREDIT);
+      allowableAcceptorKeys.add(TransportConstants.STOMP_CONSUMER_WINDOW_SIZE);
       allowableAcceptorKeys.add(TransportConstants.STOMP_MIN_LARGE_MESSAGE_SIZE_DEPRECATED);
       allowableAcceptorKeys.add(TransportConstants.STOMP_MIN_LARGE_MESSAGE_SIZE);
       allowableAcceptorKeys.add(TransportConstants.CONNECTION_TTL);
@@ -416,6 +424,7 @@ public class TransportConstants {
       allowableAcceptorKeys.add(TransportConstants.SHUTDOWN_TIMEOUT);
       allowableAcceptorKeys.add(TransportConstants.QUIET_PERIOD);
       allowableAcceptorKeys.add(TransportConstants.DISABLE_STOMP_SERVER_HEADER);
+      allowableAcceptorKeys.add(TransportConstants.AUTO_START);
 
       ALLOWABLE_ACCEPTOR_KEYS = Collections.unmodifiableSet(allowableAcceptorKeys);
 

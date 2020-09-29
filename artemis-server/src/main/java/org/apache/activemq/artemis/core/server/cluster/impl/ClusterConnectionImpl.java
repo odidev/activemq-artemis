@@ -521,13 +521,25 @@ public final class ClusterConnectionImpl implements ClusterConnection, AfterConn
    @Override
    public boolean updateMember(long uniqueEventID, String nodeId, TopologyMemberImpl memberInput) {
       if (splitBrainDetection && nodeId.equals(nodeManager.getNodeId().toString())) {
-         TopologyMemberImpl member = topology.getMember(nodeId);
-         if (member != null) {
-            if (member.getLive() != null && memberInput.getLive() != null && !member.getLive().isSameParams(connector)) {
-               ActiveMQServerLogger.LOGGER.possibleSplitBrain(nodeId, memberInput.toString());
-            }
+         if (memberInput.getLive() != null && !memberInput.getLive().isSameParams(connector)) {
+            ActiveMQServerLogger.LOGGER.possibleSplitBrain(nodeId, memberInput.toString());
          }
          memberInput.setLive(connector);
+      }
+      return true;
+   }
+
+   /**
+    * From topologyManager
+    * @param uniqueEventID
+    * @param nodeId
+    * @return
+    */
+   @Override
+   public boolean removeMember(final long uniqueEventID, final String nodeId) {
+      if (splitBrainDetection && nodeId.equals(nodeManager.getNodeId().toString())) {
+         ActiveMQServerLogger.LOGGER.possibleSplitBrain(nodeId, nodeId);
+         return false;
       }
       return true;
    }
@@ -1271,17 +1283,25 @@ public final class ClusterConnectionImpl implements ClusterConnection, AfterConn
          RemoteQueueBinding existingBinding = (RemoteQueueBinding) postOffice.getBinding(clusterName);
 
          if (existingBinding != null) {
-            if (!existingBinding.isConnected()) {
-               existingBinding.connect();
+            if (queueID.equals(existingBinding.getRemoteQueueID())) {
+               if (!existingBinding.isConnected()) {
+                  existingBinding.connect();
+                  return;
+               }
+               // Sanity check - this means the binding has already been added via another bridge, probably max
+               // hops is too high
+               // or there are multiple cluster connections for the same address
+
+               ActiveMQServerLogger.LOGGER.remoteQueueAlreadyBoundOnClusterConnection(this, clusterName);
                return;
             }
-            // Sanity check - this means the binding has already been added via another bridge, probably max
-            // hops is too high
-            // or there are multiple cluster connections for the same address
-
-            ActiveMQServerLogger.LOGGER.remoteQueueAlreadyBoundOnClusterConnection(this, clusterName);
-
-            return;
+            //this could happen during jms non-durable failover while the qname doesn't change but qid
+            //will be re-generated in backup. In that case a new remote binding will be created
+            //and put it to the map and old binding removed.
+            if (logger.isTraceEnabled()) {
+               logger.trace("Removing binding because qid changed " + queueID + " old: " + existingBinding.getRemoteQueueID());
+            }
+            removeBinding(clusterName);
          }
 
          RemoteQueueBinding binding = new RemoteQueueBindingImpl(server.getStorageManager().generateID(), queueAddress, clusterName, routingName, queueID, filterString, queue, bridge.getName(), distance + 1, messageLoadBalancingType);

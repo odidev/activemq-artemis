@@ -216,6 +216,8 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
 
    private static final String DEFAULT_GROUP_REBALANCE = "default-group-rebalance";
 
+   private static final String DEFAULT_GROUP_REBALANCE_PAUSE_DISPATCH = "default-group-rebalance-pause-dispatch";
+
    private static final String DEFAULT_GROUP_BUCKETS = "default-group-buckets";
 
    private static final String DEFAULT_GROUP_FIRST_KEY = "default-group-first-key";
@@ -294,6 +296,7 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
 
    private static final String ENABLE_METRICS = "enable-metrics";
 
+   private static final String PAGE_STORE_NAME = "page-store-name";
 
    // Attributes ----------------------------------------------------
 
@@ -368,7 +371,11 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
 
       config.setJMXUseBrokerName(getBoolean(e, "jmx-use-broker-name", config.isJMXUseBrokerName()));
 
-      config.setSecurityInvalidationInterval(getLong(e, "security-invalidation-interval", config.getSecurityInvalidationInterval(), Validators.GT_ZERO));
+      config.setSecurityInvalidationInterval(getLong(e, "security-invalidation-interval", config.getSecurityInvalidationInterval(), Validators.GE_ZERO));
+
+      config.setAuthenticationCacheSize(getLong(e, "authentication-cache-size", config.getAuthenticationCacheSize(), Validators.GE_ZERO));
+
+      config.setAuthorizationCacheSize(getLong(e, "authorization-cache-size", config.getAuthorizationCacheSize(), Validators.GE_ZERO));
 
       config.setConnectionTTLOverride(getLong(e, "connection-ttl-override", config.getConnectionTTLOverride(), Validators.MINUS_ONE_OR_GT_ZERO));
 
@@ -401,6 +408,8 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
       config.setConnectionTtlCheckInterval(getLong(e, "connection-ttl-check-interval", config.getConnectionTtlCheckInterval(), Validators.GT_ZERO));
 
       config.setConfigurationFileRefreshPeriod(getLong(e, "configuration-file-refresh-period", config.getConfigurationFileRefreshPeriod(), Validators.GT_ZERO));
+
+      config.setTemporaryQueueNamespace(getString(e, "temporary-queue-namespace", config.getTemporaryQueueNamespace(), Validators.NOT_NULL_OR_EMPTY));
 
       long globalMaxSize = getTextBytesAsLongBytes(e, GLOBAL_MAX_SIZE, -1, Validators.MINUS_ONE_OR_GT_ZERO);
 
@@ -1149,6 +1158,8 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
             addressSettings.setDefaultExclusiveQueue(XMLUtil.parseBoolean(child));
          } else if (DEFAULT_GROUP_REBALANCE.equalsIgnoreCase(name)) {
             addressSettings.setDefaultGroupRebalance(XMLUtil.parseBoolean(child));
+         } else if (DEFAULT_GROUP_REBALANCE_PAUSE_DISPATCH.equalsIgnoreCase(name)) {
+            addressSettings.setDefaultGroupRebalancePauseDispatch(XMLUtil.parseBoolean(child));
          } else if (DEFAULT_GROUP_BUCKETS.equalsIgnoreCase(name)) {
             addressSettings.setDefaultGroupBuckets(XMLUtil.parseInt(child));
          } else if (DEFAULT_GROUP_FIRST_KEY.equalsIgnoreCase(name)) {
@@ -1256,6 +1267,8 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
             addressSettings.setExpiryQueueSuffix(new SimpleString(getTrimmedTextContent(child)));
          } else if (ENABLE_METRICS.equalsIgnoreCase(name)) {
             addressSettings.setEnableMetrics(XMLUtil.parseBoolean(child));
+         } else if (PAGE_STORE_NAME.equalsIgnoreCase(name)) {
+            addressSettings.setPageStoreName(new SimpleString(getTrimmedTextContent(child)));
          }
       }
       return setting;
@@ -1294,6 +1307,7 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
       String user = null;
       Boolean exclusive = null;
       Boolean groupRebalance = null;
+      Boolean groupRebalancePauseDispatch = null;
       Integer groupBuckets = null;
       String groupFirstKey = null;
       Boolean lastValue = null;
@@ -1316,6 +1330,8 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
             exclusive = Boolean.parseBoolean(item.getNodeValue());
          } else if (item.getNodeName().equals("group-rebalance")) {
             groupRebalance = Boolean.parseBoolean(item.getNodeValue());
+         } else if (item.getNodeName().equals("group-rebalance-pause-dispatch")) {
+            groupRebalancePauseDispatch = Boolean.parseBoolean(item.getNodeValue());
          } else if (item.getNodeName().equals("group-buckets")) {
             groupBuckets = Integer.parseInt(item.getNodeValue());
          } else if (item.getNodeName().equals("group-first-key")) {
@@ -1361,6 +1377,7 @@ public final class FileConfigurationParser extends XMLConfigurationUtil {
               .setUser(user)
               .setExclusive(exclusive)
               .setGroupRebalance(groupRebalance)
+              .setGroupRebalancePauseDispatch(groupRebalancePauseDispatch)
               .setGroupBuckets(groupBuckets)
               .setGroupFirstKey(groupFirstKey)
               .setLastValue(lastValue)
